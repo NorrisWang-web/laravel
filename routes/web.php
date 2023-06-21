@@ -32,6 +32,8 @@ Route::view('/admin', 'admin')->middleware('auth:admin')->name('admin-home');
 
 
 Route::resource('admin/event', 'App\Http\Controllers\EventAdminController');
+Route::post('admin/event/update', [App\Http\Controllers\EventAdminController::class, 'update'])->name('event.update');
+Route::post('admin/event/destroy/{id}', [App\Http\Controllers\EventAdminController::class, 'destroy'])->name('event.destroy');
 
 Route::group(['middleware' => ['auth:admin']], function () {
     Route::get('password/admin/reset', [App\Http\Controllers\Auth\AdminForgotPasswordController::class, 'showLinkRequestForm'])->name('admin.password.request');

@@ -8,6 +8,7 @@ use App\Models\Prefecture;
 use App\Models\Event;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Pagination\Paginator;
 
 class EventAdminController extends Controller
 {
@@ -26,7 +27,11 @@ class EventAdminController extends Controller
      */
     public function index()
     {
-        //
+        $admin = Auth::User();
+        $events= $admin->events()->paginate(10);
+
+        return view('admins.events.index', compact('events'));
+        
     }
 
     /**
@@ -70,7 +75,7 @@ class EventAdminController extends Controller
             'icon' => $file_name,
         ]);
 
-
+        return redirect("admin/event");
     }
 
     /**
@@ -84,17 +89,64 @@ class EventAdminController extends Controller
     /**
      * Show the form for editing the specified resource.
      */
-    public function edit(string $id)
+    public function edit(Request $request, $id)
     {
-        //
+        $event = Event::find($id);
+        
+        $request->session()->put('event_id', $id);
+
+        $prefectures = Prefecture::all();
+        return view('admins.events.edit', compact('prefectures', 'event'));
     }
 
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, string $id)
+    public function update(Request $request)
     {
-        //
+        $id = $request->session()->get('event_id');
+        $admin = Auth::User();
+        $event = Event::find($id);
+        $request->validate([
+            'event_datetime' => 'required',
+            'event_name' => 'required',
+            'prefecture_id' => 'required',
+            'max_participants' => 'required',
+            
+        ]);
+
+        if(isset($request->icon)) {
+            $request->validate([
+                'icon' => [
+                    'required',
+                    'mimes:jpeg,png,jpg',
+                ]
+            ]);
+
+            $file_name = $request->files->get('icon')->getClientOriginalName();
+
+            //ファイルをアップロードしている箇所
+            $request->icon->storeAs('public/icons/', $file_name); 
+
+            $event->update([
+                'admin_id' => $admin->id,
+                'event_datetime' => $request->event_datetime,
+                'event_name' => $request->event_name,
+                'prefecture_id' => $request->prefecture_id,
+                'max_participants' => $request->max_participants,
+                'icon' => $file_name,
+            ]);
+        } else {
+            $event->update([
+                'admin_id' => $admin->id,
+                'event_datetime' => $request->event_datetime,
+                'event_name' => $request->event_name,
+                'prefecture_id' => $request->prefecture_id,
+                'max_participants' => $request->max_participants,
+            ]);
+        } 
+
+        return redirect("admin/event");
     }
 
     /**
@@ -102,6 +154,16 @@ class EventAdminController extends Controller
      */
     public function destroy(string $id)
     {
-        //
+        // Booksテーブルから指定のIDのレコード1件を取得
+
+        $event = Event::find($id);
+
+        // レコードを削除
+        
+        $event->delete();
+        
+        // 削除したら一覧画面にリダイレクト
+        
+        return redirect('admin/event');
     }
 }
